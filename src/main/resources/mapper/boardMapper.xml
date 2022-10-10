@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+   PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+   "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="board">
+	<select id="getBoardList" resultType="board">
+		select * from 
+			(select rownum as cnt, A.*
+			from
+				(select 
+					b.boardno,
+					b.userid,
+					b.username,
+	                case when length(b.boardtitle)>7 then SUBSTR(b.boardtitle,1,7)||'...'
+	               	 	else b.boardtitle end boardtitle, 
+	                case when length(b.boardcontents)>10 then SUBSTR(b.boardcontents,1,10)||'...'
+	                	else b.boardcontents end boardcontents,
+					b.contentreply, 
+					to_char(b.writedate,'YYYY-MM-DD') as writedate, 
+					to_char(b.registdate,'YYYY-MM-DD') as registdate, 
+					to_char(b.updatedate,'YYYY-MM-DD') as updatedate, 
+					b.registid, 
+					b.updateid, 
+					b.registip, 
+					b.updateip, 
+					b.notice_YN, 
+					u.userpass
+				from board_kyj b
+				left outer join boarduser_kyj u
+				on u.userid(+) = b.userid
+				order by b.notice_YN desc, b.registDate desc)A
+				where 1=1
+				<if test="userListSearchPeriod != null and userListSearchPeriod != ''">
+					<choose>
+						<when test="userListSearchPeriod == 'userName'">
+							  and userName LIKE '%${userListSearchWord}%'
+						</when>
+						<when test="userListSearchPeriod == 'userId'">
+							 and userId LIKE '%${userListSearchWord}%'
+						</when>
+						<when test="userListSearchPeriod == 'boardTitle'">
+							 and boardTitle LIKE '%${userListSearchWord}%'
+						</when>
+						<when test="userListSearchPeriod == 'boardContents'">
+							 and boardContents LIKE '%${userListSearchWord}%'
+						</when>
+					</choose>
+					
+				</if>
+				)
+			WHERE cnt BETWEEN (#{cri.page} - 1) * #{cri.perPageNum} + 1  AND #{cri.page} * #{cri.perPageNum}
+	</select>
+			<!-- where cnt BETWEEN  #{cri.pageStart} and #{cri.perPageNum} -->
+	<select id="boardListCnt" resultType="int" parameterType="hashmap">
+        SELECT count(*)
+        FROM board_kyj
+      	where 1=1
+		<if test="userListSearchPeriod != null and userListSearchPeriod != ''">
+			<choose>
+				<when test="userListSearchPeriod == 'userName'">
+					  and userName LIKE '%${userListSearchWord}%'
+				</when>
+				<when test="userListSearchPeriod == 'userId'">
+					 and userId LIKE '%${userListSearchWord}%'
+				</when>
+				<when test="userListSearchPeriod == 'boardTitle'">
+					 and boardTitle LIKE '%${userListSearchWord}%'
+				</when>
+				<when test="userListSearchPeriod == 'boardContents'">
+					 and boardContents LIKE '%${userListSearchWord}%'
+				</when>
+			</choose>
+		</if>
+	</select>
+	
+	<insert id="boardInsert" parameterType="board">
+		Insert into board_kyj 
+		(
+		boardno
+		,userid
+		,username
+		,boardtitle
+		,boardcontents
+		,notice_YN
+		,contentReply
+		,writeDate
+		,registDate
+		,registId
+		,registIp 
+		) 
+		values 
+		(
+		(board_seq.nextval)
+		,#{userId}
+		,#{userName}
+		,#{boardTitle}
+		,#{boardContents}
+		,#{notice_YN}
+		,#{contentReply}
+		,#{writeDate}
+		,to_char(sysdate,'YYYY-MM-DD')
+		,#{userId}
+		,#{registIp}
+		)
+	</insert>
+	<!-- ,SYS_CONTEXT ('USERENV', 'IP_ADDRESS') -->
+	<select id="boardDetail" resultType="board" parameterType="int">
+		select
+			b.boardno,
+			b.userid, 
+			b.username, 
+			b.boardtitle, 
+			b.boardcontents, 
+			b.contentreply, 
+			to_char(b.writedate,'YYYY-MM-DD') as writedate, 
+			to_char(b.registdate,'YYYY-MM-DD') as registdate, 
+			to_char(b.updatedate,'YYYY-MM-DD') as updatedate, 
+			b.registid, 
+			b.updateid, 
+			b.registip, 
+			b.updateip,
+			b.notice_YN, 
+			u.userpass
+		from board_kyj b, boarduser_kyj u
+		where u.userid (+)= b.userid
+		and b.boardno=#{boardno}
+	</select>
+	<!-- 수정 -->
+	<update id="boardUpdate" parameterType="board">
+		UPDATE board_kyj
+			SET 
+			notice_YN=#{notice_YN},
+			updateId = #{userId},
+			writeDate = #{writeDate},
+			updateDate = to_char(sysdate,'YYYY-MM-DD'),
+			updateIp = #{updateIp},
+			boardtitle = #{boardTitle},
+			boardcontents = #{boardContents},
+			contentReply = #{contentReply}
+		WHERE boardno=#{boardno}
+	</update>
+	<delete id="boardDelete" parameterType="int">
+		DELETE FROM board_kyj
+		WHERE boardno=#{boardno}
+	</delete>
+</mapper>
